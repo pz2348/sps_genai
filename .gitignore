@@ -4,7 +4,21 @@ __pycache__/
 build/
 dist/
 wheels/
-*.egg-info
+*.egg-info/
 
 # Virtual environments
-.venv
+.venv/
+.env
+
+# Dataset
+data/
+
+# Model files
+*.pth
+!cifar10_cnn.pth
+
+# macOS
+.DS_Store
+
+# Jupyter Notebook
+.ipynb_checkpoints/
