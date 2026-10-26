@@ -274,6 +274,79 @@ class CIFAR10CNN(nn.Module):
         x = self.fc_layers(x)
         return x
     
+
+# ==========================================
+# Module 6 - GAN
+# ==========================================
+
+class Critic(nn.Module):
+    def __init__(self):
+        super(Critic, self).__init__()
+
+        self.network = nn.Sequential(
+            nn.Conv2d(3, 64, kernel_size=4, stride=2, padding=1, bias=False),
+            nn.BatchNorm2d(64),
+            nn.LeakyReLU(0.2, inplace=True),
+
+            nn.Conv2d(64, 128, kernel_size=4, stride=2, padding=1, bias=False),
+            nn.BatchNorm2d(128),
+            nn.LeakyReLU(0.2, inplace=True),
+
+            nn.Conv2d(128, 256, kernel_size=4, stride=2, padding=1, bias=False),
+            nn.BatchNorm2d(256),
+            nn.LeakyReLU(0.2, inplace=True),
+
+            nn.Conv2d(256, 512, kernel_size=4, stride=2, padding=1, bias=False),
+            nn.BatchNorm2d(512),
+            nn.LeakyReLU(0.2, inplace=True),
+
+            nn.Conv2d(512, 1, kernel_size=4, stride=1, padding=0, bias=False),
+            nn.Flatten()
+        )
+
+    def forward(self, x):
+        return self.network(x)
+
+
+class Generator(nn.Module):
+    def __init__(self, z_dim=100):
+        super(Generator, self).__init__()
+        self.z_dim = z_dim
+
+        self.network = nn.Sequential(
+            nn.ConvTranspose2d(z_dim, 512, kernel_size=4, stride=1, padding=0, bias=False),
+            nn.BatchNorm2d(512, momentum=0.9),
+            nn.ReLU(True),
+
+            nn.ConvTranspose2d(512, 256, kernel_size=4, stride=2, padding=1, bias=False),
+            nn.BatchNorm2d(256, momentum=0.9),
+            nn.ReLU(True),
+
+            nn.ConvTranspose2d(256, 128, kernel_size=4, stride=2, padding=1, bias=False),
+            nn.BatchNorm2d(128, momentum=0.9),
+            nn.ReLU(True),
+
+            nn.ConvTranspose2d(128, 64, kernel_size=4, stride=2, padding=1, bias=False),
+            nn.BatchNorm2d(64, momentum=0.9),
+            nn.ReLU(True),
+
+            nn.ConvTranspose2d(64, 3, kernel_size=4, stride=2, padding=1),
+            nn.Tanh()
+        )
+
+    def forward(self, x):
+        x = x.view(x.size(0), self.z_dim, 1, 1)
+        return self.network(x)
+
+
+class GAN(nn.Module):
+    def __init__(self, z_dim=100):
+        super(GAN, self).__init__()
+        self.z_dim = z_dim
+        self.generator = Generator(z_dim)
+        self.critic = Critic()
+
+    
 # ==========================================
 # Get Model
 # ==========================================
@@ -300,8 +373,11 @@ def get_model(model_name):
     elif model_name == "CIFAR10CNN":
         return CIFAR10CNN()
     
+    elif model_name == "GAN":
+        return GAN()
+    
     else:
         raise ValueError(
-            "Model name must be FCNN, CNN, EnhancedCNN, VAE, or CIFAR10CNN"
-        )
+            "Model name must be FCNN, CNN, EnhancedCNN, VAE, CIFAR10CNN, or GAN"
+    )
         

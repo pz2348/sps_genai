@@ -3,6 +3,7 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 from app.bigram_model import BigramModel
 from app.embedding_model import EmbeddingModel
+from app.lstm_model import LSTMTextGenerator
 
 
 app = FastAPI()
@@ -20,6 +21,15 @@ bigram_model = BigramModel(corpus)
 
 embedding_model = EmbeddingModel()
 
+# ==========================================
+# Module 7 - LSTM Text Generation
+# ==========================================
+
+lstm_model = LSTMTextGenerator(corpus)
+
+print("Training LSTM model...")
+lstm_model.train(epochs=100)
+print("LSTM model ready!")
 
 class TextGenerationRequest(BaseModel):
     start_word: str
@@ -45,6 +55,26 @@ def generate_text(request: TextGenerationRequest):
         request.length
     )
     return {"generated_text": generated_text}
+
+# ==========================================
+# Module 7 - LSTM Text Generation API
+# ==========================================
+
+@app.post("/generate_with_rnn")
+def generate_with_rnn(request: TextGenerationRequest):
+    try:
+        generated_text = lstm_model.generate_text(
+            start_word=request.start_word,
+            length=request.length
+        )
+
+        return {"generated_text": generated_text}
+
+    except ValueError as e:
+        raise HTTPException(
+            status_code=400,
+            detail=str(e)
+        )
 
 @app.post("/embedding")
 def get_embedding(request: EmbeddingRequest):
@@ -80,6 +110,7 @@ from torchvision import transforms
 from fastapi import UploadFile, File, HTTPException
 
 from helper_lib.model import get_model
+from helper_lib.mnist_gan import MNISTGenerator
 
 
 # CIFAR-10 class names
@@ -159,3 +190,120 @@ async def predict_image(file: UploadFile = File(...)):
         "predicted_class": CIFAR10_CLASSES[predicted.item()],
         "confidence": round(confidence.item(), 4)
     }
+    
+    
+
+# ==========================================
+# Assignment 3 - MNIST GAN Image Generation
+# ==========================================
+
+from fastapi.responses import Response
+
+
+MNIST_GENERATOR_PATH = (
+    Path(__file__).resolve().parent / "mnist_generator.pth"
+)
+
+mnist_generator_model = None
+
+
+class MNISTGenerationRequest(BaseModel):
+    num_images: int = 10
+
+
+def load_mnist_generator():
+    global mnist_generator_model
+
+    if mnist_generator_model is None:
+
+        if not MNIST_GENERATOR_PATH.exists():
+            raise HTTPException(
+                status_code=503,
+                detail="MNIST Generator weights not found."
+            )
+
+        model = MNISTGenerator(noise_dim=100)
+
+        model.load_state_dict(
+            torch.load(
+                MNIST_GENERATOR_PATH,
+                map_location="cpu",
+                weights_only=True
+            )
+        )
+
+        model.eval()
+        mnist_generator_model = model
+
+    return mnist_generator_model
+
+
+@app.post("/generate-mnist")
+def generate_mnist(request: MNISTGenerationRequest):
+
+    if request.num_images < 1 or request.num_images > 25:
+        raise HTTPException(
+            status_code=400,
+            detail="num_images must be between 1 and 25."
+        )
+
+    model = load_mnist_generator()
+
+    with torch.no_grad():
+
+        noise = torch.randn(
+            request.num_images,
+            100
+        )
+
+        generated_images = model(noise)
+
+        generated_images = (
+            (generated_images + 1) / 2
+        ).clamp(0, 1)
+
+    # Create an image grid
+    import math
+
+    cols = min(5, request.num_images)
+    rows = math.ceil(request.num_images / cols)
+
+    grid_image = Image.new(
+        "L",
+        (cols * 28, rows * 28),
+        color=0
+    )
+
+    for i in range(request.num_images):
+
+        image_array = (
+            generated_images[i, 0]
+            .mul(255)
+            .byte()
+            .cpu()
+            .numpy()
+        )
+
+        digit_image = Image.fromarray(
+            image_array,
+            mode="L"
+        )
+
+        x = (i % cols) * 28
+        y = (i // cols) * 28
+
+        grid_image.paste(digit_image, (x, y))
+
+    # Enlarge for easier viewing
+    grid_image = grid_image.resize(
+        (cols * 112, rows * 112),
+        resample=Image.Resampling.NEAREST
+    )
+
+    buffer = io.BytesIO()
+    grid_image.save(buffer, format="PNG")
+
+    return Response(
+        content=buffer.getvalue(),
+        media_type="image/png"
+    )

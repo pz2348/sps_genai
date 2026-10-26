@@ -1,3 +1,4 @@
+
 # Python-generated files
 __pycache__/
 *.py[oc]
@@ -16,6 +17,7 @@ data/
 # Model files
 *.pth
 !cifar10_cnn.pth
+!mnist_generator.pth
 
 # macOS
 .DS_Store
