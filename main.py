@@ -4,6 +4,7 @@ from pydantic import BaseModel
 from app.bigram_model import BigramModel
 from app.embedding_model import EmbeddingModel
 from app.lstm_model import LSTMTextGenerator
+from app.llm_model import LLMTextGenerator
 
 
 app = FastAPI()
@@ -30,6 +31,8 @@ lstm_model = LSTMTextGenerator(corpus)
 print("Training LSTM model...")
 lstm_model.train(epochs=100)
 print("LSTM model ready!")
+
+llm_model = LLMTextGenerator()
 
 class TextGenerationRequest(BaseModel):
     start_word: str
@@ -75,6 +78,23 @@ def generate_with_rnn(request: TextGenerationRequest):
             status_code=400,
             detail=str(e)
         )
+
+@app.post("/generate_with_llm")
+def generate_with_llm(request: TextGenerationRequest):
+    if not request.start_word.strip() or request.length < 1:
+        raise HTTPException(
+            status_code=422, detail="Provide a question and a positive token limit."
+        )
+
+    try:
+        generated_text = llm_model.generate_text(request.start_word, request.length)
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=503, detail=str(e)) from e
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e)) from e
+
+    return {"generated_text": generated_text}
+
 
 @app.post("/embedding")
 def get_embedding(request: EmbeddingRequest):

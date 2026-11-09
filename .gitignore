@@ -24,3 +24,6 @@ data/
 
 # Jupyter Notebook
 .ipynb_checkpoints/
+
+# Fine-tuned GPT-2 checkpoint
+models/

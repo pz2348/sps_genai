@@ -9,13 +9,10 @@ RUN pip install --no-cache-dir uv
 COPY . .
 
 # Install dependencies
-RUN uv sync --frozen --no-dev
-
-# Download spaCy language model
-RUN uv run python -m spacy download en_core_web_lg
+RUN uv sync --locked --no-dev --no-cache
 
 # Expose FastAPI port
 EXPOSE 8000
 
 # Start FastAPI server
-CMD ["uv", "run", "fastapi", "run", "main.py", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uv", "run", "--no-sync", "fastapi", "run", "main.py", "--host", "0.0.0.0", "--port", "8000"]
