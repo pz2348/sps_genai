@@ -27,3 +27,7 @@ data/
 
 # Fine-tuned GPT-2 checkpoint
 models/
+
+# CIFAR-10 generator weights included for Docker inference
+!checkpoints/cifar_diffusion.pth
+!checkpoints/cifar_energy.pth

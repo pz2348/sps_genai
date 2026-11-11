@@ -2,12 +2,14 @@ from typing import Union
 from fastapi import FastAPI
 from pydantic import BaseModel
 from app.bigram_model import BigramModel
+from app.cifar_generation import router as cifar_generation_router
 from app.embedding_model import EmbeddingModel
 from app.lstm_model import LSTMTextGenerator
 from app.llm_model import LLMTextGenerator
 
 
 app = FastAPI()
+app.include_router(cifar_generation_router)
 
 # Sample corpus for the bigram model
 corpus = [
